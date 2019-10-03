@@ -1,0 +1,9 @@
+/data/projects/Cityline/source/Cityline/bin/production/netstandard2.0/Cityline.deps.json
+/data/projects/Cityline/source/Cityline/bin/production/netstandard2.0/Cityline.dll
+/data/projects/Cityline/source/Cityline/bin/production/netstandard2.0/Cityline.pdb
+/data/projects/Cityline/source/Cityline/obj/production/netstandard2.0/Cityline.csprojAssemblyReference.cache
+/data/projects/Cityline/source/Cityline/obj/production/netstandard2.0/Cityline.csproj.CoreCompileInputs.cache
+/data/projects/Cityline/source/Cityline/obj/production/netstandard2.0/Cityline.AssemblyInfoInputs.cache
+/data/projects/Cityline/source/Cityline/obj/production/netstandard2.0/Cityline.AssemblyInfo.cs
+/data/projects/Cityline/source/Cityline/obj/production/netstandard2.0/Cityline.dll
+/data/projects/Cityline/source/Cityline/obj/production/netstandard2.0/Cityline.pdb

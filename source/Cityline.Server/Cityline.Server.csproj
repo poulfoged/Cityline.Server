@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <PackageId>Cityline.Server</PackageId>
+        <Version>0.2-beta</Version>
+        <Authors>Poul Foged Nielsen</Authors>
+        <Company>Monzoom</Company>
+    </PropertyGroup>
+    <ItemGroup></ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.2"/>
+    </ItemGroup>
+</Project>
