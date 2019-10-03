@@ -57,7 +57,7 @@ deploy:
   server:                  # remove to push to NuGet.org
   api_key:
     secure: 52ZhK1DIBiVow/nCYWqCgNcCi4u/56P6oy23zZ3z0aMM4fWE2/+Am1VmkcRT7wmp
-  skip_symbols: false
+  skip_symbols: true
   symbol_server:           # remove to push symbols to SymbolSource.org
   on:
     branch: master # only this will work

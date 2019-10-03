@@ -27,3 +27,4 @@ Real-time library for sending events to Cityline clients. Deeply inspired by ser
     (app initialization)
 ```
 
+Image by <a href="https://pixabay.com/users/OpenClipart-Vectors-30363/?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=image&amp;utm_content=148650">OpenClipart-Vectors</a> from <a href="https://pixabay.com/?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=image&amp;utm_content=148650">Pixabay</a>
