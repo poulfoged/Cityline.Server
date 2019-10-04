@@ -37,7 +37,7 @@ See a demo of the server and javascript client [here](https://poulfoged.github.i
 To get started create a producer. A producer is a stateless class (singleton is fine) that produces an output given a condition.
 Each producer can store its state in the provided ticket and retrieve it later. The ticket itself is also stored by the clients so even on reconnect we can resume from where we left.
 
-The ticket can also be used to throttle a call by strong a timestamp. 
+The ticket can also be used to throttle a call by storing a timestamp. 
 
 This is a producer that simply sends a ping (a timestamp in this case) every 5 seconds. So in this case the ticket is only used for throtteling.
 
