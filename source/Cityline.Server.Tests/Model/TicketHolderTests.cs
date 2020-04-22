@@ -1,6 +1,9 @@
 using Cityline.Server.Model;
 using Cityline.Server;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Security.Cryptography;
+using System.Numerics;
+using System.Text;
 
 namespace Cityline.Model.Tests
 {
@@ -22,6 +25,16 @@ namespace Cityline.Model.Tests
             ////Assert
             var actualSample = result.GetTicket<SampleClass>();
             Assert.AreEqual("bob", actualSample.Name);
+        }
+
+        static ushort GetShardId(string key)
+        {
+            using(var md5 = MD5.Create())
+            {
+                var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(key));
+                var integer = BigInteger.Abs(new BigInteger(hash));
+                return (ushort)(integer % ushort.MaxValue);
+            }
         }
     }
 

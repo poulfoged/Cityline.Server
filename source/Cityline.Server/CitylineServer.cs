@@ -76,11 +76,11 @@ namespace Cityline.Server
 
             lock(padLock) 
             {
-                using (var writer = new StreamWriter(stream, new UTF8Encoding(false), 1024, true)) {
+                using (var writer = new StreamWriter(stream, new UTF8Encoding(false), 4095, true)) {
                     writer.WriteLine($"id: {ticket.AsString()}");
                     writer.WriteLine($"event: {provider.Name}");
                     writer.WriteLine($"data: {JsonConvert.SerializeObject(response, settings)}");
-                    writer.WriteLine();
+                    writer.WriteLine("");
                 }
             }
         }

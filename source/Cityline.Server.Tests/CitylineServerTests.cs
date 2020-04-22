@@ -2,7 +2,6 @@ using Cityline.Server.Model;
 using Cityline.Server;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
@@ -39,7 +38,6 @@ namespace Cityline.Tests
                 eventTicket = await reader.ReadLineAsync();
                 eventName = await reader.ReadLineAsync();
                 eventData = await reader.ReadLineAsync();
-                
             }
 
             Assert.AreEqual("event: sample", eventName);
