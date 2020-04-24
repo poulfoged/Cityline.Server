@@ -1,0 +1,6 @@
+{
+  "name": "cityline-server",
+  "scripts": {
+    "task-Cityline-Server→-nuget": "dotnet pack && dotnet nuget push **/*.nupkg -s nuget.org -k  && rm **/*.nupkg"
+  }
+}
