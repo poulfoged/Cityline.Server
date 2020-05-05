@@ -8,6 +8,8 @@ using System.Threading;
 using Cityline.Server.Model;
 using System.Collections.Concurrent;
 using System.Linq;
+using System;
+using Cityline.Server.Writers;
 
 namespace Cityline.Server
 {
@@ -16,31 +18,36 @@ namespace Cityline.Server
         public bool UseJson { get; set; }
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
         private readonly IEnumerable<ICitylineProducer> _providers;
+        private readonly TextWriter _logger;
         private static readonly JsonSerializerSettings settings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver(), Formatting = Formatting.None };
-    
-        public CitylineServer(IEnumerable<ICitylineProducer> providers) 
+
+        public CitylineServer(IEnumerable<ICitylineProducer> providers, TextWriter logger = null)
         {
             _providers = providers;
+            _logger = logger ?? TextWriter.Null;
         }
 
-        public async Task WriteStream(Stream stream, CitylineRequest request, IContext context, CancellationToken cancellationToken = default) 
+        public async Task WriteStream(Stream stream, CitylineRequest request, IContext context, CancellationToken cancellationToken = default)
         {
-            try 
+            try
             {
                 await DoWriteStream(stream, request, context, cancellationToken);
-            } 
-            catch(TaskCanceledException) {}
+            }
+            catch (TaskCanceledException) { }
         }
 
         public async Task DoWriteStream(Stream stream, CitylineRequest request, IContext context, CancellationToken cancellationToken = default)
         {
             ConcurrentDictionary<Task, object> tasks = new ConcurrentDictionary<Task, object>();
 
-            var queue = new Queue<ICitylineProducer>(_providers);
+            var queue = new ConcurrentQueue<ICitylineProducer>(_providers);
             while (!cancellationToken.IsCancellationRequested)
             {
-                if (queue.Count > 0) {
-                    var provider = queue.Dequeue();
+                if (queue.Count > 0)
+                {
+                    if (!queue.TryDequeue(out ICitylineProducer provider))
+                        continue;
+
                     var name = provider.Name;
                     TicketHolder ticket = null;
 
@@ -52,26 +59,37 @@ namespace Cityline.Server
 
                     ticket = ticket ?? new TicketHolder();
 
-                    #pragma warning disable 4014
-                    tasks.TryAdd(Task.Run(async () => 
+#pragma warning disable 4014
+                    tasks.TryAdd(Task.Run(async () =>
                     {
-                        try {
-                            await RunProducer(provider, stream, ticket, context, cancellationToken);
+                        try
+                        {
+                            var ownSource = new CancellationTokenSource();
+                            cancellationToken.Register(ownSource.Cancel);
+
+                            await RunProducer(provider, stream, ticket, context, ownSource.Token);
 
                             if (request.Tickets.ContainsKey(name))
                                 request.Tickets[name] = ticket.AsString();
                             else
                                 request.Tickets.Add(name, ticket.AsString());
-                        } finally {
+                        }
+                        catch(Exception ex) {
+                            _logger.WriteLine($"Producer {provider.Name} failed: {ex}");
+                        }
+                        finally
+                        {
                             queue.Enqueue(provider);
                         }
-                    }).ContinueWith(task => 
+                    }).ContinueWith(task =>
                     {
-                        if (task.Exception != null)  
+                        _logger.WriteLine($"Task failed for {provider.Name} failed: {task.Exception}");
+
+                        if (task.Exception != null)
                             throw task.Exception;
                     }, cancellationToken, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Current)
                     .ContinueWith(task => tasks.TryRemove(task, out object value)), null);
-                    #pragma warning restore 4014
+#pragma warning restore 4014
                 }
 
                 await Task.Delay(200, cancellationToken);
@@ -80,11 +98,11 @@ namespace Cityline.Server
             await Task.WhenAll(tasks.Keys);
         }
 
-        
 
-        private async Task WriteJson(TextWriter writer, string dataValue, ICitylineProducer provider, TicketHolder ticket, CancellationToken cancellationToken = default(CancellationToken)) 
+
+        private async Task WriteJson(TextWriter writer, string dataValue, ICitylineProducer provider, TicketHolder ticket, CancellationToken cancellationToken = default(CancellationToken))
         {
-            using (var jsonWriter = new JsonTextWriter(writer)  { Formatting = Formatting.None })
+            using (var jsonWriter = new JsonTextWriter(writer) { Formatting = Formatting.None })
             {
                 await jsonWriter.WriteStartObjectAsync(cancellationToken);
                 await jsonWriter.WritePropertyNameAsync("id", cancellationToken);
@@ -98,7 +116,7 @@ namespace Cityline.Server
             }
         }
 
-        private async Task WriteText(TextWriter writer, string dataValue, ICitylineProducer provider, TicketHolder ticket, CancellationToken cancellationToken = default(CancellationToken)) 
+        private async Task WriteText(TextWriter writer, string dataValue, ICitylineProducer provider, TicketHolder ticket, CancellationToken cancellationToken = default(CancellationToken))
         {
             await writer.WriteLineAsync($"id: {ticket.AsString()}");
             await writer.WriteLineAsync($"event: {provider.Name}");
@@ -108,28 +126,41 @@ namespace Cityline.Server
 
         private async Task RunProducer(ICitylineProducer provider, Stream stream, TicketHolder ticket, IContext context, CancellationToken cancellationToken = default)
         {
-            var response = await provider.GetFrame(ticket, context, cancellationToken);
+            ICitylineWriter writer;
+            
+            if (this.UseJson)
+                writer = new CitylineJsonWriter(semaphore, provider, stream, ticket, cancellationToken);
+            else
+                writer = new CitylineLineWriter(semaphore, provider, stream, ticket, cancellationToken);
+
+            // Func<object, Task> emitter = new Func<object, Task>(async obj =>
+            // {
+            //     var value = JsonConvert.SerializeObject(obj, settings);
+            //     try
+            //     {
+            //         await semaphore.WaitAsync(cancellationToken);
+            //         using (var writer = new StreamWriter(stream, new UTF8Encoding(false), value.Length + 1024, true))
+            //         {
+            //             if (UseJson)
+            //                 await WriteJson(writer, value, provider, ticket, CancellationToken.None); // CancellationToken.None, we don't want partial messages
+            //             else
+            //                 await WriteText(writer, value, provider, ticket, CancellationToken.None);
+            //         }
+            //     }
+            //     finally
+            //     {
+            //         semaphore.Release();
+            //     }
+            // });
+
+            // context is shared, so this wont work
+            
+            var response = await provider.GetFrame(ticket, context, writer, cancellationToken);
 
             if (response == null)
                 return;
 
-            var value = JsonConvert.SerializeObject(response, settings);
-
-            try 
-            {
-                await semaphore.WaitAsync(cancellationToken);
-                using (var writer = new StreamWriter(stream, new UTF8Encoding(false), value.Length + 1024, true)) 
-                {
-                    if (UseJson)
-                        await WriteJson(writer, value, provider, ticket, CancellationToken.None); // CancellationToken.None, we don't want partial messages
-                    else
-                        await WriteText(writer, value, provider, ticket, CancellationToken.None);
-                }   
-            } 
-            finally 
-            {
-                semaphore.Release();
-            }
+            await writer.Write(response);
         }
     }
 }
