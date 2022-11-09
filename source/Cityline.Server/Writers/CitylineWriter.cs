@@ -16,8 +16,7 @@ namespace Cityline.Server.Writers
         { 
             ContractResolver = new CamelCasePropertyNamesContractResolver(), 
             NullValueHandling = NullValueHandling.Ignore,
-            Formatting = Formatting.None,
-            Converters = { new StringEnumConverter { NamingStrategy = new CamelCaseNamingStrategy()} }
+            Formatting = Formatting.None
         };
 
         private readonly SemaphoreSlim semaphore;

@@ -23,7 +23,7 @@ namespace Cityline.Server
 
         public CitylineServer(IEnumerable<ICitylineProducer> providers, TextWriter logger = null)
         {
-            _providers = providers;
+            _providers = providers.OrderBy(m => m.Priority);
             _logger = logger ?? TextWriter.Null;
         }
 
@@ -132,30 +132,8 @@ namespace Cityline.Server
                 writer = new CitylineJsonWriter(semaphore, provider, stream, ticket, cancellationToken);
             else
                 writer = new CitylineLineWriter(semaphore, provider, stream, ticket, cancellationToken);
-
-            // Func<object, Task> emitter = new Func<object, Task>(async obj =>
-            // {
-            //     var value = JsonConvert.SerializeObject(obj, settings);
-            //     try
-            //     {
-            //         await semaphore.WaitAsync(cancellationToken);
-            //         using (var writer = new StreamWriter(stream, new UTF8Encoding(false), value.Length + 1024, true))
-            //         {
-            //             if (UseJson)
-            //                 await WriteJson(writer, value, provider, ticket, CancellationToken.None); // CancellationToken.None, we don't want partial messages
-            //             else
-            //                 await WriteText(writer, value, provider, ticket, CancellationToken.None);
-            //         }
-            //     }
-            //     finally
-            //     {
-            //         semaphore.Release();
-            //     }
-            // });
-
-            // context is shared, so this wont work
-            
-            var response = await provider.GetFrame(ticket, context, writer, cancellationToken);
+ 
+            var response = await provider.GetFrame(ticket, context, cancellationToken);
 
             if (response == null)
                 return;

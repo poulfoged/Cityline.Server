@@ -121,9 +121,11 @@ namespace Cityline.Tests
     {
         public string Name => "sample";
 
+        public int Priority => 0;
+
         public object sampleObject = new { hello = "world"};
 
-        public Task<object> GetFrame(ITicketHolder ticket, IContext context, ICitylineWriter writer, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<object> GetFrame(ITicketHolder ticket, IContext context, CancellationToken cancellationToken = default(CancellationToken))
         {
             var myState = ticket.GetTicket<MyState>();
 
