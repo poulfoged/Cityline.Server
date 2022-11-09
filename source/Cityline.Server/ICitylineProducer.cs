@@ -1,5 +1,8 @@
+using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Cityline.Server.Model;
+using Cityline.Server.Writers;
 
 namespace Cityline.Server
 {
@@ -7,6 +10,6 @@ namespace Cityline.Server
     {
         string Name { get; }
         int Priority { get; }
-        Task<object> GetFrame(ITicketHolder ticketHolder, IContext context, CancellationToken cancellationToken = default); 
+        Task Run(TicketHolder ticketHolder, IContext context, CitylineWriter writer, CancellationToken cancellationToken);
     }
 }

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>netstandard2.0</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
         <PackageId>Cityline.Server</PackageId>
         <Version>0.3.13-beta</Version>
         <Authors>Poul Foged Nielsen</Authors>
@@ -8,9 +8,23 @@
         <PackageIcon>icon.png</PackageIcon>
     </PropertyGroup>
     <ItemGroup>
-        <None Include="../../icon.png" Pack="true" PackagePath="/"/>
+      <None Remove="Microsoft.AspNetCore.Http.Abstractions" />
+      <None Remove="Microsoft.Extensions.DependencyInjection" />
+      <None Remove="Microsoft.AspNetCore.Http.Extensions" />
+      <None Remove="Internal\" />
+      <None Remove="Microsoft.AspNetCore.WebSockets" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Newtonsoft.Json" Version="12.0.2"/>
+        <None Include="../../icon.png" Pack="true" PackagePath="/" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+        <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.2.1" />
+    </ItemGroup>
+    <ItemGroup>
+      <Folder Include="Internal\" />
     </ItemGroup>
 </Project>

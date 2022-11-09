@@ -1,0 +1,23 @@
+﻿@page
+@using Cityline.WebTest.Features.Webpack
+@model IndexModel
+@inject Parser parser
+
+@{
+    ViewData["Title"] = "Home page";
+}
+
+@foreach (var src in parser.GetStyles("dist/_homepage.html"))
+{
+    @Html.Raw(src)
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome</h1>
+    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+</div>
+
+@foreach (var src in parser.GetScripts("dist/_homepage.html"))
+{
+    @Html.Raw(src)
+}
