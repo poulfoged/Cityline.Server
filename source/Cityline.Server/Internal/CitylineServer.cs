@@ -10,12 +10,12 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System;
 using Cityline.Server.Writers;
+using System.Net.WebSockets;
 
 namespace Cityline.Server
 {
-    public class CitylineServer
+     public class CitylineServer : IDisposable
     {
-        public bool UseJson { get; set; }
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
         private readonly IEnumerable<ICitylineProducer> _providers;
         private readonly TextWriter _logger;
@@ -27,23 +27,23 @@ namespace Cityline.Server
             _logger = logger ?? TextWriter.Null;
         }
 
-        public async Task WriteStream(Stream stream, CitylineRequest request, IContext context, CancellationToken cancellationToken = default)
+        public async Task WriteStream(WebSocket socket, CitylineRequest request, IContext context, CancellationToken cancellationToken = default)
         {
             try
             {
-                await DoWriteStream(stream, request, context, cancellationToken);
+                await DoWriteStream(socket, request, context, cancellationToken);
             }
             catch (TaskCanceledException) { }
         }
 
-        public async Task DoWriteStream(Stream stream, CitylineRequest request, IContext context, CancellationToken cancellationToken = default)
+        public async Task DoWriteStream(WebSocket socket, CitylineRequest request, IContext context, CancellationToken cancellationToken = default)
         {
             ConcurrentDictionary<Task, object> tasks = new ConcurrentDictionary<Task, object>();
 
             var queue = new ConcurrentQueue<ICitylineProducer>(_providers);
             while (!cancellationToken.IsCancellationRequested)
             {
-                if (queue.Count > 0)
+                if (!queue.IsEmpty)
                 {
                     if (!queue.TryDequeue(out ICitylineProducer provider))
                         continue;
@@ -64,10 +64,7 @@ namespace Cityline.Server
                     {
                         try
                         {
-                            var ownSource = new CancellationTokenSource();
-                            cancellationToken.Register(ownSource.Cancel);
-
-                            await RunProducer(provider, stream, ticket, context, ownSource.Token);
+                            await RunProducer(provider, socket, ticket, context, cancellationToken);
 
                             if (request.Tickets.ContainsKey(name))
                                 request.Tickets[name] = ticket.AsString();
@@ -81,7 +78,7 @@ namespace Cityline.Server
                         {
                             queue.Enqueue(provider);
                         }
-                    }).ContinueWith(task =>
+                    }, cancellationToken).ContinueWith(task =>
                     {
                         _logger.WriteLine($"Task failed for {provider.Name} failed: {task.Exception}");
 
@@ -92,53 +89,24 @@ namespace Cityline.Server
 #pragma warning restore 4014
                 }
 
-                await Task.Delay(200, cancellationToken);
+                await Task.Delay(10, cancellationToken);
             }
 
-            await Task.WhenAll(tasks.Keys);
+            // await Task.WhenAll(tasks.Keys);
+
+            await Task.Run(()=> Task.WaitAll(tasks.Keys.ToArray()), cancellationToken);
         }
 
-
-
-        private async Task WriteJson(TextWriter writer, string dataValue, ICitylineProducer provider, TicketHolder ticket, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task RunProducer(ICitylineProducer producer, WebSocket socket, TicketHolder ticket, IContext context, CancellationToken cancellationToken)
         {
-            using (var jsonWriter = new JsonTextWriter(writer) { Formatting = Formatting.None })
-            {
-                await jsonWriter.WriteStartObjectAsync(cancellationToken);
-                await jsonWriter.WritePropertyNameAsync("id", cancellationToken);
-                await jsonWriter.WriteValueAsync(ticket.AsString(), cancellationToken);
-                await jsonWriter.WritePropertyNameAsync("event", cancellationToken);
-                await jsonWriter.WriteValueAsync(provider.Name, cancellationToken);
-                await jsonWriter.WritePropertyNameAsync("data", cancellationToken);
-                await jsonWriter.WriteValueAsync(dataValue, cancellationToken);
-                await jsonWriter.WriteEndObjectAsync(cancellationToken);
-                await writer.WriteAsync('\n');
-            }
+            using CitylineWriter writer = new(semaphore, producer, socket, ticket, cancellationToken);
+            await producer.Run(ticket, context, writer, cancellationToken);        
         }
 
-        private async Task WriteText(TextWriter writer, string dataValue, ICitylineProducer provider, TicketHolder ticket, CancellationToken cancellationToken = default(CancellationToken))
+        public void Dispose()
         {
-            await writer.WriteLineAsync($"id: {ticket.AsString()}");
-            await writer.WriteLineAsync($"event: {provider.Name}");
-            await writer.WriteLineAsync($"data: {dataValue}");
-            await writer.WriteLineAsync("");
-        }
-
-        private async Task RunProducer(ICitylineProducer provider, Stream stream, TicketHolder ticket, IContext context, CancellationToken cancellationToken = default)
-        {
-            ICitylineWriter writer;
-            
-            if (this.UseJson)
-                writer = new CitylineJsonWriter(semaphore, provider, stream, ticket, cancellationToken);
-            else
-                writer = new CitylineLineWriter(semaphore, provider, stream, ticket, cancellationToken);
- 
-            var response = await provider.GetFrame(ticket, context, cancellationToken);
-
-            if (response == null)
-                return;
-
-            await writer.Write(response);
+            semaphore?.Dispose();
+            _logger.Dispose();
         }
     }
 }
