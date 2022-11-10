@@ -66,82 +66,52 @@ namespace Cityline.Tests
             await service.WriteStream(socket, new CitylineRequest(), null, cancellationTokenSource.Token);
 
             ////Assert
-            stream.Position = 0;
-            string fullEvent;
-            
-            using (var reader = new StreamReader(stream, Encoding.Latin1))
-                fullEvent = await reader.ReadLineAsync();
-            
+            stream.Position = 2; // not that WebSocket's is adding 2 bytes at the beginning for some reason
+            string json;
+            using (var reader = new StreamReader(stream, new UTF8Encoding(false)))
+                json = await reader.ReadLineAsync();
 
-            var payloadObject = JsonConvert.DeserializeObject< ParseHelper>(fullEvent.Substring(2));
-
-          
-            _output.WriteLine("Code is " + (int)fullEvent[0]);
-            _output.WriteLine("Code is " + (int)fullEvent[1]);
-
-
-            payloadObject.Event.Should().Be("sample");
+            var payload = JsonConvert.DeserializeObject<ParseHelper>(json);
+            payload.Event.Should().Be("sample");
 
         }
 
-            //[TestMethod]
-            //public async Task Can_write_json_to_stream()
-            //{
-            //    ////Arrange
-            //    var service = new CitylineServer(new[] { new SampleProvider()}) { UseJson = true};
-            //    var stream = new MemoryStream();
-            //    var cancellationTokenSource = new CancellationTokenSource();
-            //    cancellationTokenSource.CancelAfter(1000);
 
-            //    ////Act
-            //    await service.WriteStream(stream, new CitylineRequest(), null, cancellationTokenSource.Token);
 
-            //    ////Assert
-            //    stream.Position = 0;
-            //    string json;
-            //    using (var reader = new StreamReader(stream)) 
-            //    {
-            //        json = await reader.ReadLineAsync();
-            //    }
+        [Fact]
+        public async Task Can_write_large_json_to_stream()
+        {
+            ////Arrange
+            var sampleObject = new
+            {
+                Test = "dimmer",
+                Numbers = Enumerable.Range(0, 1000).ToDictionary(m => $"row-{m}", m => $"value-{m}")
+            };
 
-            //    var parsed = JsonConvert.DeserializeObject<ParseHelper>(json);
+            var service = new CitylineServer(new[] { new SampleProvider { sampleObject = sampleObject } });
+            var stream = new MemoryStream();
+            var cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource.CancelAfter(1000); 
+            var socket = WebSocket.CreateFromStream(stream, true, null, TimeSpan.Zero);
 
-            //    Assert.AreEqual("sample", parsed.Event);
-            //}
+            ////Act
+            await service.WriteStream(socket, new CitylineRequest(), null, cancellationTokenSource.Token);
 
-            //    [TestMethod]
-            //    public async Task Can_write_large_json_to_stream()
-            //    {
-            //        ////Arrange
+            ////Assert
+            stream.Position = 4; // what is that, a size indicator?
 
-            //        var sampleObject = new 
-            //        {
-            //            Test = "dimmer",
-            //            Numbers = Enumerable.Range(0, 1000).ToDictionary(m => $"row-{m}", m => $"value-{m}")
-            //        };
+            string json;
+            using (var reader = new StreamReader(stream, new UTF8Encoding(false)))
+            {
+                json = await reader.ReadLineAsync();
+            }
 
-            //        var service = new CitylineServer(new[] { new SampleProvider { sampleObject = sampleObject }}) { UseJson = true};
-            //        var stream = new MemoryStream();
-            //        var cancellationTokenSource = new CancellationTokenSource();
-            //        cancellationTokenSource.CancelAfter(1000);
+            var parsed = JsonConvert.DeserializeObject<ParseHelper>(json);
+            var parsedData = JsonConvert.DeserializeObject<ParseHelper2>(parsed.Data);
 
-            //        ////Act
-            //        await service.WriteStream(stream, new CitylineRequest(), null, cancellationTokenSource.Token);
-
-            //        ////Assert
-            //        stream.Position = 0;
-            //        string json;
-            //        using (var reader = new StreamReader(stream)) 
-            //        {
-            //            json = await reader.ReadLineAsync();
-            //        }
-
-            //        var parsed = JsonConvert.DeserializeObject<ParseHelper>(json);
-            //        var parsedData = JsonConvert.DeserializeObject<ParseHelper2>(parsed.Data);
-
-            //        Assert.AreEqual("value-999", parsedData.Numbers["row-999"]);
-            //    }
-            //}
+            parsedData.Numbers.Values.Should().Contain("value-999");
+        }
+    }
 
     class ParseHelper 
     {
@@ -173,6 +143,5 @@ namespace Cityline.Tests
         }
 
         class MyState {}
-    }
     }
 }
