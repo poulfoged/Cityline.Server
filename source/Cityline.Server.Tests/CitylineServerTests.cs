@@ -1,6 +1,5 @@
 using Cityline.Server.Model;
 using Cityline.Server;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
@@ -11,102 +10,138 @@ using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Net.Sockets;
 using Cityline.Server.Writers;
+using Xunit;
+using FluentAssertions;
+using Xunit.Abstractions;
+using System.Text;
 
 namespace Cityline.Tests
 {
-    [TestClass]
     public class CitylineServerTests
     {
+        private readonly ITestOutputHelper _output;
+
         static CitylineServerTests()
         {
             SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
         }
 
-        //[TestMethod]
-        //public async Task Can_write_to_stream()
-        //{
-        //    ////Arrange
-        //    var service = new CitylineServer(new[] { new SampleProvider()});
-        //    var stream = new MemoryStream();
-        //    var cancellationTokenSource = new CancellationTokenSource();
-        //    cancellationTokenSource.CancelAfter(1000);
+        public CitylineServerTests(ITestOutputHelper output)
+        {
+            this._output = output;
+        }
+
+        [Fact]
+        public async Task Can_clean_up() 
+        {
+            //// Arrange
+            WeakReference reference = new WeakReference(new CitylineServer(new[] { new SampleProvider() }));
+            var cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource.CancelAfter(1);
+
+            var socket = WebSocket.CreateFromStream(MemoryStream.Null, true, null, TimeSpan.Zero);
+            await (reference.Target as CitylineServer).WriteStream(socket, new CitylineRequest(), null, cancellationTokenSource.Token);
+
+            /// Act
+            (reference.Target as IDisposable).Dispose();
+            socket = null;
+            await Task.Delay(1);
+            GC.Collect();
+
+            //// Assert
+            reference.IsAlive.Should().Be(false);
+        }
+
+        [Fact]
+        public async Task Can_write_to_stream()
+        {
+            ////Arrange
+            var service = new CitylineServer(new[] { new SampleProvider() });
+            var stream = new MemoryStream();
+            var cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource.CancelAfter(1000);
+            var socket = WebSocket.CreateFromStream(stream, true, null, TimeSpan.Zero);
+
+            ////Act
+            await service.WriteStream(socket, new CitylineRequest(), null, cancellationTokenSource.Token);
+
+            ////Assert
+            stream.Position = 0;
+            string fullEvent;
             
-        //    ////Act
-        //    await service.WriteStream(stream, new CitylineRequest(), null, cancellationTokenSource.Token);
-
-        //    ////Assert
-        //    stream.Position = 0;
-        //    string eventName;
-        //    string eventData;
-        //    string eventTicket;
-
-        //    using (var reader = new StreamReader(stream)) {
-        //        eventTicket = await reader.ReadLineAsync();
-        //        eventName = await reader.ReadLineAsync();
-        //        eventData = await reader.ReadLineAsync();
-        //    }
-
-        //    Assert.AreEqual("event: sample", eventName);
-        //}
-
-        //[TestMethod]
-        //public async Task Can_write_json_to_stream()
-        //{
-        //    ////Arrange
-        //    var service = new CitylineServer(new[] { new SampleProvider()}) { UseJson = true};
-        //    var stream = new MemoryStream();
-        //    var cancellationTokenSource = new CancellationTokenSource();
-        //    cancellationTokenSource.CancelAfter(1000);
+            using (var reader = new StreamReader(stream, Encoding.Latin1))
+                fullEvent = await reader.ReadLineAsync();
             
-        //    ////Act
-        //    await service.WriteStream(stream, new CitylineRequest(), null, cancellationTokenSource.Token);
 
-        //    ////Assert
-        //    stream.Position = 0;
-        //    string json;
-        //    using (var reader = new StreamReader(stream)) 
-        //    {
-        //        json = await reader.ReadLineAsync();
-        //    }
+            var payloadObject = JsonConvert.DeserializeObject< ParseHelper>(fullEvent.Substring(2));
 
-        //    var parsed = JsonConvert.DeserializeObject<ParseHelper>(json);
+          
+            _output.WriteLine("Code is " + (int)fullEvent[0]);
+            _output.WriteLine("Code is " + (int)fullEvent[1]);
 
-        //    Assert.AreEqual("sample", parsed.Event);
-        //}
 
-    //    [TestMethod]
-    //    public async Task Can_write_large_json_to_stream()
-    //    {
-    //        ////Arrange
+            payloadObject.Event.Should().Be("sample");
 
-    //        var sampleObject = new 
-    //        {
-    //            Test = "dimmer",
-    //            Numbers = Enumerable.Range(0, 1000).ToDictionary(m => $"row-{m}", m => $"value-{m}")
-    //        };
+        }
 
-    //        var service = new CitylineServer(new[] { new SampleProvider { sampleObject = sampleObject }}) { UseJson = true};
-    //        var stream = new MemoryStream();
-    //        var cancellationTokenSource = new CancellationTokenSource();
-    //        cancellationTokenSource.CancelAfter(1000);
-            
-    //        ////Act
-    //        await service.WriteStream(stream, new CitylineRequest(), null, cancellationTokenSource.Token);
+            //[TestMethod]
+            //public async Task Can_write_json_to_stream()
+            //{
+            //    ////Arrange
+            //    var service = new CitylineServer(new[] { new SampleProvider()}) { UseJson = true};
+            //    var stream = new MemoryStream();
+            //    var cancellationTokenSource = new CancellationTokenSource();
+            //    cancellationTokenSource.CancelAfter(1000);
 
-    //        ////Assert
-    //        stream.Position = 0;
-    //        string json;
-    //        using (var reader = new StreamReader(stream)) 
-    //        {
-    //            json = await reader.ReadLineAsync();
-    //        }
+            //    ////Act
+            //    await service.WriteStream(stream, new CitylineRequest(), null, cancellationTokenSource.Token);
 
-    //        var parsed = JsonConvert.DeserializeObject<ParseHelper>(json);
-    //        var parsedData = JsonConvert.DeserializeObject<ParseHelper2>(parsed.Data);
+            //    ////Assert
+            //    stream.Position = 0;
+            //    string json;
+            //    using (var reader = new StreamReader(stream)) 
+            //    {
+            //        json = await reader.ReadLineAsync();
+            //    }
 
-    //        Assert.AreEqual("value-999", parsedData.Numbers["row-999"]);
-    //    }
-    //}
+            //    var parsed = JsonConvert.DeserializeObject<ParseHelper>(json);
+
+            //    Assert.AreEqual("sample", parsed.Event);
+            //}
+
+            //    [TestMethod]
+            //    public async Task Can_write_large_json_to_stream()
+            //    {
+            //        ////Arrange
+
+            //        var sampleObject = new 
+            //        {
+            //            Test = "dimmer",
+            //            Numbers = Enumerable.Range(0, 1000).ToDictionary(m => $"row-{m}", m => $"value-{m}")
+            //        };
+
+            //        var service = new CitylineServer(new[] { new SampleProvider { sampleObject = sampleObject }}) { UseJson = true};
+            //        var stream = new MemoryStream();
+            //        var cancellationTokenSource = new CancellationTokenSource();
+            //        cancellationTokenSource.CancelAfter(1000);
+
+            //        ////Act
+            //        await service.WriteStream(stream, new CitylineRequest(), null, cancellationTokenSource.Token);
+
+            //        ////Assert
+            //        stream.Position = 0;
+            //        string json;
+            //        using (var reader = new StreamReader(stream)) 
+            //        {
+            //            json = await reader.ReadLineAsync();
+            //        }
+
+            //        var parsed = JsonConvert.DeserializeObject<ParseHelper>(json);
+            //        var parsedData = JsonConvert.DeserializeObject<ParseHelper2>(parsed.Data);
+
+            //        Assert.AreEqual("value-999", parsedData.Numbers["row-999"]);
+            //    }
+            //}
 
     class ParseHelper 
     {
@@ -128,22 +163,13 @@ namespace Cityline.Tests
 
         public object sampleObject = new { hello = "world"};
 
-        public Task<object> GetFrame(ITicketHolder ticket, IContext context, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            var myState = ticket.GetTicket<MyState>();
-
-            ticket.UpdateTicket(new { created = DateTime.UtcNow });
-
-            return Task.FromResult(sampleObject);
-        }
-
-        public Task Run(TicketHolder ticketHolder, IContext context, CitylineWriter socket, CancellationToken cancellationToken)
+        public async Task Run(TicketHolder ticketHolder, IContext context, CitylineWriter writer, CancellationToken cancellationToken)
         {
             var myState = ticketHolder.GetTicket<MyState>();
 
             ticketHolder.UpdateTicket(new { created = DateTime.UtcNow });
 
-            return Task.FromResult(sampleObject);
+            await writer.Write(sampleObject);
         }
 
         class MyState {}

@@ -1,16 +1,16 @@
 using Cityline.Server.Model;
 using Cityline.Server;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Security.Cryptography;
 using System.Numerics;
 using System.Text;
+using FluentAssertions;
+using Xunit;
 
 namespace Cityline.Model.Tests
 {
-    [TestClass]
     public class TicketHolderTests
     {
-        [TestMethod]
+        [Fact]
         public void Can_serialize_ticket()
         {
             ////Arrange
@@ -24,7 +24,8 @@ namespace Cityline.Model.Tests
 
             ////Assert
             var actualSample = result.GetTicket<SampleClass>();
-            Assert.AreEqual("bob", actualSample.Name);
+
+            actualSample.Name.Should().Be("bob");
         }
 
         static ushort GetShardId(string key)

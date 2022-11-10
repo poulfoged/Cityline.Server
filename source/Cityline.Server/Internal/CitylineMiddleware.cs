@@ -25,7 +25,7 @@ namespace Cityline.Server
 
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
         {
-            if (context?.WebSockets?.IsWebSocketRequest == false) //|| context.Request.Path != _citylineOptions.Path)
+            if (context?.WebSockets?.IsWebSocketRequest == false || context.Request.Path != _citylineOptions.Path)
             {
                 await _next(context);
                 return;

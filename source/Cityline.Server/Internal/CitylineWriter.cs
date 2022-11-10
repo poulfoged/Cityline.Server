@@ -14,7 +14,7 @@ namespace Cityline.Server.Writers
 
  public class CitylineWriter : IDisposable
     {
-        private static readonly JsonSerializerSettings settings = new JsonSerializerSettings 
+        private static readonly JsonSerializerSettings _settings = new JsonSerializerSettings 
         { 
             ContractResolver = new CamelCasePropertyNamesContractResolver(), 
             NullValueHandling = NullValueHandling.Ignore,
@@ -22,19 +22,19 @@ namespace Cityline.Server.Writers
             Converters = new JsonConverter[] { new Newtonsoft.Json.Converters.StringEnumConverter() }
         };
 
-        private readonly SemaphoreSlim semaphore;
-        private readonly ICitylineProducer provider; 
-        private readonly TicketHolder ticket;
-        private readonly CancellationToken cancellationToken;
+        private readonly SemaphoreSlim _semaphore;
+        private readonly ICitylineProducer _provider; 
+        private readonly TicketHolder _ticket;
+        private readonly CancellationToken _cancellationToken;
         private readonly WebSocket _webSocket;
 
         public CitylineWriter(SemaphoreSlim semaphore, ICitylineProducer provider, WebSocket socket, TicketHolder ticket, CancellationToken cancellationToken = default)
         {
-            this.semaphore = semaphore;
-            this.provider = provider;
+            _semaphore = semaphore;
+            _provider = provider;
             _webSocket = socket;
-            this.ticket = ticket;
-            this.cancellationToken = cancellationToken;
+            _ticket = ticket;
+            _cancellationToken = cancellationToken;
         }
 
         private async Task Write(WebSocket socket, string dataValue, ICitylineProducer provider, TicketHolder ticket, CancellationToken cancellationToken = default)
@@ -56,26 +56,24 @@ namespace Cityline.Server.Writers
             }
 
             var buffer = new ArraySegment<byte>(stream.ToArray(), 0, (int)stream.Length);
-
-
             await socket.SendAsync(buffer, WebSocketMessageType.Text, true, cancellationToken); 
         }
 
         public async Task Write(Object obj)
         {
-            var value = JsonConvert.SerializeObject(obj, settings);
+            var value = JsonConvert.SerializeObject(obj, _settings);
 
-            if (cancellationToken.IsCancellationRequested)
+            if (_cancellationToken.IsCancellationRequested)
                 return;
 
-            await semaphore.WaitAsync(cancellationToken);
+            await _semaphore.WaitAsync(_cancellationToken);
             try
             {
-                await Write(_webSocket, value, provider, ticket, cancellationToken);    
+                await Write(_webSocket, value, _provider, _ticket, _cancellationToken);    
             }
             finally
             {
-                semaphore.Release();
+                _semaphore.Release();
             }
         }
 
