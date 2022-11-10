@@ -105,8 +105,37 @@ namespace Cityline.Server
 
         public void Dispose()
         {
-            semaphore?.Dispose();
-            _logger.Dispose();
+            Dispose(true);
+            System.GC.SuppressFinalize(this);
+
+           
+        }
+
+        private bool alreadyDisposed = false;
+
+        public void Dispose(bool explicitCall)
+        {
+            if (!this.alreadyDisposed)
+            {
+                if (explicitCall)
+                {
+                    System.Console.WriteLine("Not in the destructor, " +
+                     "so cleaning up other objects.");
+                    // Not in the destructor, so we can reference other objects.
+
+                    semaphore?.Dispose();
+                    _logger.Dispose();
+                }
+                // Perform standard cleanup here...
+                System.Console.WriteLine("Cleaning up.");
+            }
+            alreadyDisposed = true;
+        }
+
+        ~CitylineServer()
+        {
+            System.Console.WriteLine("In the destructor now.");
+            Dispose(false);
         }
     }
 }

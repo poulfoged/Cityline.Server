@@ -15,10 +15,9 @@ using Newtonsoft.Json;
 
 namespace Cityline.Server
 {
-    public class CitylineReciever
+    public class CitylineReciever : IDisposable
     {
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _firstFrames = new();
-
         private readonly ConcurrentDictionary<string, Frame> _frames = new();
         private readonly IEnumerable<ICitylineConsumer> _consumers;
         private ClaimsPrincipal _principal;
@@ -43,14 +42,12 @@ namespace Cityline.Server
             }
         }
 
-        public CancellationToken StartBackground(WebSocket webSocket, CancellationToken cancellationToken) 
+        public void StartBackground(WebSocket webSocket, CancellationToken cancellationToken) 
         {
-            var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken); 
-            var _ = Task.Run(async () => await Listen(webSocket, linkedSource), cancellationToken);
-            return linkedSource.Token;
+            var _ = Task.Run(async () => await Listen(webSocket, cancellationToken), cancellationToken); 
         }
 
-        public async Task Listen(WebSocket webSocket, CancellationTokenSource linkedSource)
+        public async Task Listen(WebSocket webSocket, CancellationToken cancellationToken)
         {
             IContext context = new Context();
 
@@ -58,19 +55,9 @@ namespace Cityline.Server
             var buffer = new byte[1024 * 4];
             WebSocketReceiveResult result = null;
 
-            var cancellationToken = linkedSource.Token;
-
             do
             {
-                
-
-                if (webSocket.State != WebSocketState.Connecting && webSocket.State != WebSocketState.Open)
-                {
-                    linkedSource.Cancel();
-                    return;
-                }
-
-                result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), linkedSource.Token);
+                result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
 
                 if (result.Count == 0)
                     return;
@@ -101,7 +88,7 @@ namespace Cityline.Server
                     // log
                 }
 
-            } while (!linkedSource.Token.IsCancellationRequested);
+            } while (!cancellationToken.IsCancellationRequested);
         }
 
         internal void SetUser(ClaimsPrincipal principal)
@@ -109,7 +96,7 @@ namespace Cityline.Server
             _principal = principal;
         }
 
-        internal static async Task RunConsumer(ICitylineConsumer consumer, Frame frame, IContext context, CancellationToken cancellationToken = default)
+        internal static async Task RunConsumer(ICitylineConsumer consumer, Frame frame, IContext context, CancellationToken cancellationToken)
         {
             consumer.ThrowIfNull(nameof(consumer));
             frame.ThrowIfNull(nameof(frame));
@@ -140,6 +127,14 @@ namespace Cityline.Server
             catch (Exception ex) 
             {
                 throw new Exception($"Consumer {consumer.Name} failed processing frame {frame}", ex);
+            }
+        }
+
+        public void Dispose()
+        {
+            foreach (var firstFrame in this._firstFrames)
+            {
+                firstFrame.Value?.Dispose();
             }
         }
     }

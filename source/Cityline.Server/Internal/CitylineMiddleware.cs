@@ -25,35 +25,52 @@ namespace Cityline.Server
 
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
         {
-            if (context.Request.Path != _citylineOptions.Path)
+            if (context?.WebSockets?.IsWebSocketRequest == false) //|| context.Request.Path != _citylineOptions.Path)
             {
                 await _next(context);
                 return;
             }
 
-
-            using var _citylineServer = serviceProvider.GetService<CitylineServer>();
-            var _citylineReciever = serviceProvider.GetService<CitylineReciever>();
-
-            var citylineContext = new Context { RequestUrl = new Uri(context.Request.GetEncodedUrl()), User = context.User };
-            var timeoutSource = new CancellationTokenSource(TimeSpan.FromHours(2));
-            var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutSource.Token, context.RequestAborted);
-            var cancellationToken = linkedSource.Token;
-
-            if (context.WebSockets.IsWebSocketRequest)
+            try
             {
+
+                Console.WriteLine("Request started: " + context.Request.GetEncodedUrl());
+
+                var cancellationToken = context.RequestAborted;
+
+                using var _citylineServer = serviceProvider.GetService<CitylineServer>();
+                using var _citylineReciever = serviceProvider.GetService<CitylineReciever>();
+
+                var citylineContext = new Context { RequestUrl = new Uri(context.Request.GetEncodedUrl()), User = context.User };
+
+
+                context.RequestAborted.Register(() =>
+                {
+                    Console.WriteLine("Aborted!" + cancellationToken.IsCancellationRequested);
+                });
+
+
                 using WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
 
-                cancellationToken = _citylineReciever.StartBackground(webSocket, cancellationToken);
+                Console.WriteLine("Here socket is: " + webSocket.State);
+
+                // start reading
+                _citylineReciever.StartBackground(webSocket, cancellationToken);
 
                 // Auth
                 var headers = await _citylineReciever.WaitFirstFrame<Dictionary<string, string>>("_headers", cancellationToken);
 
-
                 // State
                 var request = await _citylineReciever.WaitFirstFrame<CitylineRequest>("_request", cancellationToken);
 
-                await _citylineServer.WriteStream(webSocket, request, citylineContext, linkedSource.Token);
+                // start writing
+                await _citylineServer.WriteStream(webSocket, request, citylineContext, cancellationToken);
+                
+            }
+            catch (OperationCanceledException ex)
+            {
+                Console.WriteLine("Operation canceled: " + ex);
+                
             }
         }
     }
