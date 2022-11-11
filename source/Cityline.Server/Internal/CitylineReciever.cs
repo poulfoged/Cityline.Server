@@ -71,13 +71,13 @@ namespace Cityline.Server
                     _firstFrames.TryAdd(frame.Event, new SemaphoreSlim(0));
                     _firstFrames[frame.Event].Release();
 
-                    var context = new Context { User = _context.User };
-                    if (context.User != null) // TODO: make this prittier
+                    // var context = new Context { User = _context.User };
+                    if (this._context.User != null) // TODO: make this prittier
                     {
                         foreach (var consumer in _consumers) 
                         {
                             if (frame.Event == consumer.Name) 
-                                await RunConsumer(consumer, frame, context, cancellationToken);
+                                await RunConsumer(consumer, frame, this._context, cancellationToken);
                         }
                     }
                 }
