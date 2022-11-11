@@ -133,7 +133,7 @@ namespace Cityline.Tests
 
         public object sampleObject = new { hello = "world"};
 
-        public async Task Run(TicketHolder ticketHolder, IContext context, CitylineWriter writer, CancellationToken cancellationToken)
+        public async Task Run(TicketHolder ticketHolder, IContext context, ICitylineWriter writer, CancellationToken cancellationToken)
         {
             var myState = ticketHolder.GetTicket<MyState>();
 

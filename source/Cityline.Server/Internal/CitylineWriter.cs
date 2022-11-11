@@ -12,18 +12,18 @@ using System.Net.WebSockets;
 namespace Cityline.Server.Writers
 {
 
- public class CitylineWriter : IDisposable
+    internal class CitylineWriter : ICitylineWriter, IDisposable
     {
-        private static readonly JsonSerializerSettings _settings = new JsonSerializerSettings 
-        { 
-            ContractResolver = new CamelCasePropertyNamesContractResolver(), 
+        private static readonly JsonSerializerSettings _settings = new JsonSerializerSettings
+        {
+            ContractResolver = new CamelCasePropertyNamesContractResolver(),
             NullValueHandling = NullValueHandling.Ignore,
             Formatting = Formatting.None,
             Converters = new JsonConverter[] { new Newtonsoft.Json.Converters.StringEnumConverter() }
         };
 
         private readonly SemaphoreSlim _semaphore;
-        private readonly ICitylineProducer _provider; 
+        private readonly ICitylineProducer _provider;
         private readonly TicketHolder _ticket;
         private readonly CancellationToken _cancellationToken;
         private readonly WebSocket _webSocket;
@@ -42,7 +42,7 @@ namespace Cityline.Server.Writers
             using var stream = new MemoryStream();
             using var writer = new StreamWriter(stream, new UTF8Encoding(false), 1024, true);
 
-            using (var jsonWriter = new JsonTextWriter(writer) { Formatting = Formatting.None, AutoCompleteOnClose = true }) 
+            using (var jsonWriter = new JsonTextWriter(writer) { Formatting = Formatting.None, AutoCompleteOnClose = true })
             {
                 await jsonWriter.WriteStartObjectAsync(cancellationToken);
                 await jsonWriter.WritePropertyNameAsync("id", cancellationToken);
@@ -56,7 +56,7 @@ namespace Cityline.Server.Writers
             }
 
             var buffer = new ArraySegment<byte>(stream.ToArray(), 0, (int)stream.Length);
-            await socket.SendAsync(buffer, WebSocketMessageType.Text, true, cancellationToken); 
+            await socket.SendAsync(buffer, WebSocketMessageType.Text, true, cancellationToken);
         }
 
         public async Task Write(Object obj)
@@ -69,7 +69,7 @@ namespace Cityline.Server.Writers
             await _semaphore.WaitAsync(_cancellationToken);
             try
             {
-                await Write(_webSocket, value, _provider, _ticket, _cancellationToken);    
+                await Write(_webSocket, value, _provider, _ticket, _cancellationToken);
             }
             finally
             {

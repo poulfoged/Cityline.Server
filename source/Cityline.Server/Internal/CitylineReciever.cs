@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Security.Claims;
+using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,12 +16,12 @@ using Newtonsoft.Json;
 
 namespace Cityline.Server
 {
-    public class CitylineReciever : IDisposable
+    internal class CitylineReciever : IDisposable
     {
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _firstFrames = new();
         private readonly ConcurrentDictionary<string, Frame> _frames = new();
         private readonly IEnumerable<ICitylineConsumer> _consumers;
-        private ClaimsPrincipal _principal;
+        private Context _context;
 
         public CitylineReciever(IEnumerable<ICitylineConsumer> consumers)
         {
@@ -49,8 +50,6 @@ namespace Cityline.Server
 
         public async Task Listen(WebSocket webSocket, CancellationToken cancellationToken)
         {
-            IContext context = new Context();
-
             var serializer = new JsonSerializer();
             var buffer = new byte[1024 * 4];
             WebSocketReceiveResult result = null;
@@ -72,7 +71,7 @@ namespace Cityline.Server
                     _firstFrames.TryAdd(frame.Event, new SemaphoreSlim(0));
                     _firstFrames[frame.Event].Release();
 
-                    context = new Context { User = _principal };
+                    var context = new Context { User = _context.User };
                     if (context.User != null) // TODO: make this prittier
                     {
                         foreach (var consumer in _consumers) 
@@ -91,9 +90,9 @@ namespace Cityline.Server
             } while (!cancellationToken.IsCancellationRequested);
         }
 
-        internal void SetUser(ClaimsPrincipal principal)
+        internal void SetContext(Context context)
         {
-            _principal = principal;
+            _context = context;
         }
 
         internal static async Task RunConsumer(ICitylineConsumer consumer, Frame frame, IContext context, CancellationToken cancellationToken)

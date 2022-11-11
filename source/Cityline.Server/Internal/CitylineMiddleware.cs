@@ -12,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Cityline.Server
 {
-    public class CitylineMiddleware
+    internal class CitylineMiddleware
     {
         private readonly RequestDelegate _next;
         private readonly CitylineOptions _citylineOptions;
@@ -43,6 +43,8 @@ namespace Cityline.Server
 
                 var citylineContext = new Context { RequestUrl = new Uri(context.Request.GetEncodedUrl()), User = context.User };
 
+                // for now, maybe migrate it further per call
+                _citylineReciever.SetContext(citylineContext);
 
                 context.RequestAborted.Register(() =>
                 {
@@ -58,13 +60,15 @@ namespace Cityline.Server
                 _citylineReciever.StartBackground(webSocket, cancellationToken);
 
                 // Auth
-                var headers = await _citylineReciever.WaitFirstFrame<Dictionary<string, string>>("_headers", cancellationToken);
+                citylineContext.Headers = await _citylineReciever.WaitFirstFrame<Dictionary<string, string>>("_headers", cancellationToken);
 
                 // State
-                var request = await _citylineReciever.WaitFirstFrame<CitylineRequest>("_request", cancellationToken);
+                citylineContext.Request = await _citylineReciever.WaitFirstFrame<CitylineRequest>("_request", cancellationToken);
+
+                _citylineOptions.Authorization?.Invoke(citylineContext);
 
                 // start writing
-                await _citylineServer.WriteStream(webSocket, request, citylineContext, cancellationToken);
+                await _citylineServer.WriteStream(webSocket, citylineContext.Request, citylineContext, cancellationToken);
                 
             }
             catch (OperationCanceledException ex)

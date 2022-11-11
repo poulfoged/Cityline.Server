@@ -2,7 +2,7 @@
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
         <PackageId>Cityline.Server</PackageId>
-        <Version>0.3.13-beta</Version>
+        <Version>0.4.2-pre</Version>
         <Authors>Poul Foged Nielsen</Authors>
         <Company>Monzoom</Company>
         <PackageIcon>icon.png</PackageIcon>

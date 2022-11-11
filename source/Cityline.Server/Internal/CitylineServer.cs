@@ -14,7 +14,7 @@ using System.Net.WebSockets;
 
 namespace Cityline.Server
 {
-     public class CitylineServer : IDisposable
+    internal class CitylineServer : IDisposable
     {
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
         private readonly IEnumerable<ICitylineProducer> _providers;
@@ -71,7 +71,8 @@ namespace Cityline.Server
                             else
                                 request.Tickets.Add(name, ticket.AsString());
                         }
-                        catch(Exception ex) {
+                        catch (Exception ex)
+                        {
                             _logger.WriteLine($"Producer {provider.Name} failed: {ex}");
                         }
                         finally
@@ -94,13 +95,13 @@ namespace Cityline.Server
 
             // await Task.WhenAll(tasks.Keys);
 
-            await Task.Run(()=> Task.WaitAll(tasks.Keys.ToArray()), cancellationToken);
+            await Task.Run(() => Task.WaitAll(tasks.Keys.ToArray()), cancellationToken);
         }
 
         private async Task RunProducer(ICitylineProducer producer, WebSocket socket, TicketHolder ticket, IContext context, CancellationToken cancellationToken)
         {
             using CitylineWriter writer = new(semaphore, producer, socket, ticket, cancellationToken);
-            await producer.Run(ticket, context, writer, cancellationToken);        
+            await producer.Run(ticket, context, writer, cancellationToken);
         }
 
         public void Dispose()
@@ -108,7 +109,7 @@ namespace Cityline.Server
             Dispose(true);
             System.GC.SuppressFinalize(this);
 
-           
+
         }
 
         private bool alreadyDisposed = false;

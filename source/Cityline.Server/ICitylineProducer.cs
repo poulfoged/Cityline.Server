@@ -10,6 +10,6 @@ namespace Cityline.Server
     {
         string Name { get; }
         int Priority { get; }
-        Task Run(TicketHolder ticketHolder, IContext context, CitylineWriter writer, CancellationToken cancellationToken);
+        Task Run(TicketHolder ticketHolder, IContext context, ICitylineWriter writer, CancellationToken cancellationToken);
     }
 }

@@ -12,7 +12,7 @@ namespace Cityline.Server
 
         public string Name => "ping";
 
-        public async Task Run(TicketHolder ticketHolder, IContext context, CitylineWriter writer, CancellationToken cancellationToken)
+        public async Task Run(TicketHolder ticketHolder, IContext context, ICitylineWriter writer, CancellationToken cancellationToken)
         {
             var ticket = ticketHolder.GetTicket<PingTicket>();
 

@@ -1,8 +1,11 @@
 using System;
+using System.Runtime.CompilerServices;
 using Cityline.Server;
 using Microsoft.AspNetCore.Builder;
 
 // ReSharper disable once CheckNamespace
+
+[assembly: InternalsVisibleTo("Cityline.Server.Tests")]
 
 namespace Microsoft.Extensions.DependencyInjection
 {
