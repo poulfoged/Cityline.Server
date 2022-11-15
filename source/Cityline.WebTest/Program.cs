@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.FileProviders;
+﻿using Cityline.Server;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +12,10 @@ builder.Services.AddRazorPages();
 builder.Services
     .AddWebpackFeature()
     .AddCityline();
+
+builder.Services
+    .AddHealthChecks()
+        .AddCheck<CitylineHealthCheck>(nameof(CitylineHealthCheck));
 
 var app = builder.Build();
 
@@ -31,6 +38,16 @@ app.UseRouting();
 {
     FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "dist/")),
     RequestPath = "/dist",
+});
+
+app.UseEndpoints(endpoints =>
+{
+    //...
+    endpoints.MapHealthChecks("/health-check", new HealthCheckOptions
+    {
+        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+    });
+    //...
 });
 
 

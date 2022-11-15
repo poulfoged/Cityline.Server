@@ -25,7 +25,8 @@ namespace Cityline.Server
 
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
         {
-            if (context?.WebSockets?.IsWebSocketRequest == false || context.Request.Path != _citylineOptions.Path)
+            // Upgrade to wss seems to work better if we don't reject non-websockets here
+            if (context.Request.Path != _citylineOptions.Path) //context?.WebSockets?.IsWebSocketRequest == false || 
             {
                 await _next(context);
                 return;
@@ -34,7 +35,7 @@ namespace Cityline.Server
             try
             {
 
-                Console.WriteLine("Request started: " + context.Request.GetEncodedUrl());
+                Console.WriteLine("*** Request started: " + context.Request.GetEncodedUrl() + context?.WebSockets?.IsWebSocketRequest);
 
                 var cancellationToken = context.RequestAborted;
 
@@ -55,6 +56,9 @@ namespace Cityline.Server
                 using WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
 
                 Console.WriteLine("Here socket is: " + webSocket.State);
+
+                // send an empty message, this switches status on the client and we can quickly get to request and headers
+                await webSocket.SendAsync(new byte[0], WebSocketMessageType.Text, false, cancellationToken);
 
                 // start reading
                 _citylineReciever.StartBackground(webSocket, cancellationToken);

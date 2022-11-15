@@ -21,10 +21,13 @@ namespace Cityline.Server
         private readonly TextWriter _logger;
         private static readonly JsonSerializerSettings settings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver(), Formatting = Formatting.None };
 
+        internal static int _instanceCount;
+
         public CitylineServer(IEnumerable<ICitylineProducer> providers, TextWriter logger = null)
         {
             _providers = providers.OrderBy(m => m.Priority);
             _logger = logger ?? TextWriter.Null;
+            Interlocked.Increment(ref _instanceCount);
         }
 
         public async Task WriteStream(WebSocket socket, CitylineRequest request, IContext context, CancellationToken cancellationToken = default)
@@ -38,7 +41,7 @@ namespace Cityline.Server
 
         public async Task DoWriteStream(WebSocket socket, CitylineRequest request, IContext context, CancellationToken cancellationToken = default)
         {
-            ConcurrentDictionary<Task, object> tasks = new ConcurrentDictionary<Task, object>();
+            var tasks = new ConcurrentDictionary<string, Task>();
 
             var queue = new ConcurrentQueue<ICitylineProducer>(_providers);
             while (!cancellationToken.IsCancellationRequested)
@@ -59,8 +62,7 @@ namespace Cityline.Server
 
                     ticket = ticket ?? new TicketHolder();
 
-#pragma warning disable 4014
-                    tasks.TryAdd(Task.Run(async () =>
+                    tasks.TryAdd(name, Task.Run(async () =>
                     {
                         try
                         {
@@ -86,16 +88,17 @@ namespace Cityline.Server
                         if (task.Exception != null)
                             throw task.Exception;
                     }, cancellationToken, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Current)
-                    .ContinueWith(task => tasks.TryRemove(task, out object value)), null);
-#pragma warning restore 4014
-                }
+                    .ContinueWith(task => {
+                        var result = tasks.TryRemove(name, out Task value);
 
+                        if (result)
+                            task?.Dispose();
+
+                    }, cancellationToken));
+                }
                 await Task.Delay(10, cancellationToken);
             }
-
-            // await Task.WhenAll(tasks.Keys);
-
-            await Task.Run(() => Task.WaitAll(tasks.Keys.ToArray()), cancellationToken);
+            await Task.Run(() => Task.WaitAll(tasks.Values.ToArray()), cancellationToken);
         }
 
         private async Task RunProducer(ICitylineProducer producer, WebSocket socket, TicketHolder ticket, IContext context, CancellationToken cancellationToken)
@@ -137,6 +140,7 @@ namespace Cityline.Server
         {
             System.Console.WriteLine("In the destructor now.");
             Dispose(false);
+            Interlocked.Decrement(ref _instanceCount);
         }
     }
 }

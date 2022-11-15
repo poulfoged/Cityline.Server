@@ -2,7 +2,7 @@
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
         <PackageId>Cityline.Server</PackageId>
-        <Version>0.4.4-pre</Version>
+        <Version>0.4.6-pre</Version>
         <Authors>Poul Foged Nielsen</Authors>
         <Company>Monzoom</Company>
         <PackageIcon>icon.png</PackageIcon>
@@ -13,6 +13,7 @@
       <None Remove="Microsoft.AspNetCore.Http.Extensions" />
       <None Remove="Internal\" />
       <None Remove="Microsoft.AspNetCore.WebSockets" />
+      <None Remove="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" />
     </ItemGroup>
     <ItemGroup>
         <None Include="../../icon.png" Pack="true" PackagePath="/" />
@@ -23,6 +24,7 @@
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.2.0" />
         <PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.2.1" />
+        <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="7.0.0" />
     </ItemGroup>
     <ItemGroup>
       <Folder Include="Internal\" />

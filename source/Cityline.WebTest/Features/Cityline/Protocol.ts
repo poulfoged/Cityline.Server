@@ -1,4 +1,4 @@
-import { Frame } from "../CitylineClient";
+import { Frame } from "./CitylineClient";
 
 export interface Protocol { 
     // initialize protocol, only returns on fail

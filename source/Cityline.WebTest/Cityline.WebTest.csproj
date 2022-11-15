@@ -13,8 +13,14 @@
   </ItemGroup>
   <ItemGroup>
     <None Remove="HtmlAgilityPack" />
+    <None Remove="Microsoft.Extensions.Diagnostics.HealthChecks" />
+    <None Remove="AspNetCore.HealthChecks.UI.Client" />
+    <None Remove="Microsoft.Bcl.AsyncInterfaces" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="7.0.0" />
+    <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="6.0.5" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="7.0.0" />
   </ItemGroup>
 </Project>

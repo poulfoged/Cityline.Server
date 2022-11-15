@@ -1,6 +1,6 @@
 import { Frame } from "./CitylineClient";
 import { CitylineOptions } from "./CitylineOptions";
-import { Protocol, StateAccessor } from "./Protocol";
+import { Protocol, StateAccessor } from "./Protocol"; 
 
 enum WebsocketState {
     CONNECTING = 0, // Socket has been created. The connection is not yet open.
@@ -67,7 +67,10 @@ export class WebsocketProtocol implements Protocol {
         try {
             this.socket = new WebSocket(this.options.socketEndpoint);
 
-            (<any>window).socket = this.socket;
+            window.addEventListener("unload", () => {
+                if( this.socket?.readyState == WebsocketState.OPEN)
+                    this.socket?.close();
+            });
 
             this.socket.addEventListener("message", this.messageHandler);
             this.socket.addEventListener("error", this.errorHandler);
@@ -84,6 +87,7 @@ export class WebsocketProtocol implements Protocol {
                 event: "_headers",
                 data: JSON.stringify(this.options.headers || {})
             };
+            console.log("Sending headers");
             await this.send(frame);
 
             // now send state of all channels
