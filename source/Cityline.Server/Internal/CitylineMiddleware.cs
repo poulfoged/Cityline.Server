@@ -12,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Cityline.Server
 {
-    internal class CitylineMiddleware
+    public class CitylineMiddleware
     {
         private readonly RequestDelegate _next;
         private readonly CitylineOptions _citylineOptions;

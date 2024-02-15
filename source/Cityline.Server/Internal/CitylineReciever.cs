@@ -16,7 +16,7 @@ using Newtonsoft.Json;
 
 namespace Cityline.Server
 {
-    internal class CitylineReciever : IDisposable
+    public class CitylineReciever : IDisposable
     {
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _firstFrames = new();
         private readonly ConcurrentDictionary<string, Frame> _frames = new();

@@ -14,7 +14,7 @@ using System.Net.WebSockets;
 
 namespace Cityline.Server
 {
-    internal class CitylineServer : IDisposable
+    public class CitylineServer : IDisposable
     {
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
         private readonly IEnumerable<ICitylineProducer> _providers;

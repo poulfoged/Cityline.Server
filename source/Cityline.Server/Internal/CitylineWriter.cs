@@ -12,7 +12,7 @@ using System.Net.WebSockets;
 namespace Cityline.Server.Writers
 {
 
-    internal class CitylineWriter : ICitylineWriter, IDisposable
+    public class CitylineWriter : ICitylineWriter, IDisposable
     {
         private static readonly JsonSerializerSettings _settings = new JsonSerializerSettings
         {
