@@ -25,8 +25,14 @@ namespace Cityline.Server
 
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
         {
+            if (!context.WebSockets.IsWebSocketRequest)
+            {
+                context.Response.StatusCode = StatusCodes.Status426UpgradeRequired;
+                return;
+            }
+
             // Upgrade to wss seems to work better if we don't reject non-websockets here
-            if (context.Request.Path != _citylineOptions.Path) //context?.WebSockets?.IsWebSocketRequest == false || 
+            if (context.Request.Path != _citylineOptions.Path)
             {
                 await _next(context);
                 return;
