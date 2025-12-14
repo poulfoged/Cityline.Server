@@ -19,15 +19,13 @@ namespace Cityline.Server
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
         private readonly IEnumerable<ICitylineProducer> _providers;
         private readonly TextWriter _logger;
+        private bool _disposed;
         private static readonly JsonSerializerSettings settings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver(), Formatting = Formatting.None };
-
-        internal static int _instanceCount;
 
         public CitylineServer(IEnumerable<ICitylineProducer> providers, TextWriter logger = null)
         {
             _providers = providers.OrderBy(m => m.Priority);
             _logger = logger ?? TextWriter.Null;
-            Interlocked.Increment(ref _instanceCount);
         }
 
         public async Task WriteStream(WebSocket socket, CitylineRequest request, IContext context, CancellationToken cancellationToken = default)
@@ -88,7 +86,8 @@ namespace Cityline.Server
                         if (task.Exception != null)
                             throw task.Exception;
                     }, cancellationToken, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Current)
-                    .ContinueWith(task => {
+                    .ContinueWith(task =>
+                    {
                         var result = tasks.TryRemove(name, out Task value);
 
                         if (result)
@@ -109,38 +108,11 @@ namespace Cityline.Server
 
         public void Dispose()
         {
-            Dispose(true);
-            System.GC.SuppressFinalize(this);
+            if (_disposed) return;
+            _disposed = true;
 
-
-        }
-
-        private bool alreadyDisposed = false;
-
-        public void Dispose(bool explicitCall)
-        {
-            if (!this.alreadyDisposed)
-            {
-                if (explicitCall)
-                {
-                    System.Console.WriteLine("Not in the destructor, " +
-                     "so cleaning up other objects.");
-                    // Not in the destructor, so we can reference other objects.
-
-                    semaphore?.Dispose();
-                    _logger.Dispose();
-                }
-                // Perform standard cleanup here...
-                System.Console.WriteLine("Cleaning up.");
-            }
-            alreadyDisposed = true;
-        }
-
-        ~CitylineServer()
-        {
-            System.Console.WriteLine("In the destructor now.");
-            Dispose(false);
-            Interlocked.Decrement(ref _instanceCount);
+            semaphore?.Dispose();
+            // no logging
         }
     }
 }
