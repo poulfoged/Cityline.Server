@@ -20,10 +20,14 @@ namespace Cityline.Server
         private readonly IEnumerable<ICitylineProducer> _providers;
         private readonly TextWriter _logger;
         private bool _disposed;
+        private static int _instanceCount;
         private static readonly JsonSerializerSettings settings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver(), Formatting = Formatting.None };
+        public static int InstanceCount => Volatile.Read(ref _instanceCount);
+
 
         public CitylineServer(IEnumerable<ICitylineProducer> providers, TextWriter logger = null)
         {
+            Interlocked.Increment(ref _instanceCount);
             _providers = providers.OrderBy(m => m.Priority);
             _logger = logger ?? TextWriter.Null;
         }
@@ -111,8 +115,8 @@ namespace Cityline.Server
             if (_disposed) return;
             _disposed = true;
 
-            semaphore?.Dispose();
-            // no logging
+            Interlocked.Decrement(ref _instanceCount);
+            semaphore.Dispose();
         }
     }
 }

@@ -17,7 +17,7 @@ namespace Cityline.Server
 
         public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
         {
-            var cityserverCount  = CitylineServer._instanceCount;
+            var cityserverCount  = CitylineServer.InstanceCount;
             IReadOnlyDictionary<string, object> data = new Dictionary<string, object>
             {
                 { "cityline-server-count", cityserverCount }
