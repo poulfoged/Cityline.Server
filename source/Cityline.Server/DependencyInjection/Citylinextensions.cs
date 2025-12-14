@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using Cityline.Server;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 // ReSharper disable once CheckNamespace
 
@@ -11,8 +12,14 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class CitylinExtensions 
     {
-        public static IServiceCollection AddCityline(this IServiceCollection services) 
+        public static IServiceCollection AddCityline(this IServiceCollection services, IHealthChecksBuilder healthChecksBuilder = null) 
         {
+            if (healthChecksBuilder != null)
+            {
+                healthChecksBuilder.AddCheck<CitylineHealthCheck>("cityline-health-check");
+            }
+
+
             return services
                 .AddTransient<ICitylineProducer, PingProducer>()
                 .AddTransient<ICitylineConsumer, PingConsumer>()
