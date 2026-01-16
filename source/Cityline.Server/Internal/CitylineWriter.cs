@@ -55,8 +55,24 @@ namespace Cityline.Server.Writers
                 await writer.WriteAsync('\n');
             }
 
-            var buffer = new ArraySegment<byte>(stream.ToArray(), 0, (int)stream.Length);
-            await socket.SendAsync(buffer, WebSocketMessageType.Text, true, cancellationToken);
+            // var buffer = new ArraySegment<byte>(stream.ToArray(), 0, (int)stream.Length);
+            var buffer = stream.GetBuffer().AsMemory(0, (int)stream.Length);
+            try
+            {
+                await socket.SendAsync(buffer, WebSocketMessageType.Text, true, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // client disconnected
+            }
+            catch (WebSocketException)
+            {
+                // client disconnected mid-send
+            }
+            catch (IOException)
+            {
+                // TLS/socket already gone
+            }
         }
 
         public async Task Write(Object obj)
